@@ -25,10 +25,7 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.security.AccessControlContext;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -72,6 +69,23 @@ public class ForgeInstaller {
 
     @SuppressWarnings("unused")
     public static Map.Entry<String, List<String>> applicationInstall() throws Throwable {
+        var arclightFolder = Paths.get(".arclight");
+        if (!Files.exists(arclightFolder)) {
+            Files.createDirectories(arclightFolder);
+        } else if (!Files.isDirectory(arclightFolder)) {
+            System.out.println("A file named .arclight already exists! Moving");
+            int i = 0;
+            while (true) {
+                var target = arclightFolder.resolveSibling(".arclight_"+1);
+                try {
+                    Files.move(arclightFolder, target);
+                    break;
+                } catch (FileAlreadyExistsException ignored) {
+                    i++;
+                }
+            }
+            Files.createDirectories(arclightFolder);
+        }
         InputStream stream = ForgeInstaller.class.getResourceAsStream("/META-INF/installer.json");
         InstallInfo installInfo = new Gson().fromJson(new InputStreamReader(stream), InstallInfo.class);
         List<Supplier<Path>> suppliers = checkMavenNoSource(installInfo.libraries);
@@ -83,6 +97,20 @@ public class ForgeInstaller {
             ExecutorService pool = Executors.newWorkStealingPool(8);
             CompletableFuture<?>[] array = suppliers.stream().map(reportSupply(pool, System.out::println)).toArray(CompletableFuture[]::new);
             if (installForge) {
+                final var runSh = "run.sh";
+                final var runBat = "run.bat";
+                var userJvmArgs = arclightFolder.resolveSibling("user_jvm_args.txt");
+                var pthToSh = arclightFolder.resolveSibling(runSh);
+                var pthToBat = arclightFolder.resolveSibling(runBat);
+                var pthToArcSh = arclightFolder.resolve(runSh);
+                var pthToArcBat = arclightFolder.resolve(runBat);
+                if (Files.exists(pthToSh)) {
+                    Files.move(pthToSh, pthToArcSh);
+                }
+                if (Files.exists(pthToBat)) {
+                    Files.move(pthToBat, pthToArcBat);
+                }
+
                 var futures = installForge(installInfo, pool, System.out::println);
                 handleFutures(System.out::println, futures);
                 System.out.println("Forge installation is starting, please wait... ");
@@ -102,6 +130,22 @@ public class ForgeInstaller {
                         Method method = loader.loadClass("net.minecraftforge.installer.SimpleInstaller").getMethod("main", String[].class);
                         method.invoke(null, (Object) new String[]{"--installServer", ".", "--debug"});
                     }
+                }
+
+                if (Files.exists(pthToSh)) {
+                    Files.delete(pthToSh);
+                }
+                if (Files.exists(pthToBat)) {
+                    Files.delete(pthToBat);
+                }
+                if (Files.exists(userJvmArgs)) {
+                    Files.delete(userJvmArgs);
+                }
+                if (Files.exists(pthToArcBat)) {
+                    Files.move(pthToArcBat, pthToBat);
+                }
+                if (Files.exists(pthToArcSh)) {
+                    Files.move(pthToArcSh, pthToSh);
                 }
             }
             handleFutures(System.out::println, array);
