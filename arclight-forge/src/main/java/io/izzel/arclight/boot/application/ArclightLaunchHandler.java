@@ -2,6 +2,9 @@ package io.izzel.arclight.boot.application;
 
 import net.minecraftforge.fml.loading.targets.ForgeServerLaunchHandler;
 
+/*
+ * Loaded by ArclightBootstrapClassLoader
+ */
 public class ArclightLaunchHandler extends ForgeServerLaunchHandler {
 
     @Override

@@ -10,6 +10,9 @@ import java.util.Arrays;
 import java.util.ServiceLoader;
 import java.util.function.Consumer;
 
+/*
+ * Loaded by ArclightBootstrapClassLoader
+ */
 public class ApplicationBootstrap extends AbstractBootstrap implements Consumer<String[]> {
 
     private static final int MIN_DEPRECATED_VERSION = 60;
@@ -36,7 +39,8 @@ public class ApplicationBootstrap extends AbstractBootstrap implements Consumer<
         }
         try {
             this.setupMod();
-            this.dirtyHacks();
+            // Transformed by ArclightBootstrapClassLoader
+            // this.dirtyHacks();
             int targetIndex = Arrays.asList(args).indexOf("--launchTarget");
             if (targetIndex >= 0 && targetIndex < args.length - 1) {
                 args[targetIndex + 1] = "arclightserver";

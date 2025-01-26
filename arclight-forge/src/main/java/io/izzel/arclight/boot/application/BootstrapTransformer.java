@@ -109,6 +109,7 @@ public class BootstrapTransformer extends ClassLoader {
      * where the ApplicationBootstrap will be ahead of modlauncher, which is an UB related to module name.
      * Modify BootstrapLauncher to use ApplicationBootstrap directly so a change in module name won't
      * affect launch process.
+     * Use Arclight decorated ModuleClassLoader to intercept loading and transform target classes.
      */
     public byte[] transformBootstrapLauncher(InputStream inputStream) throws IOException {
         System.out.println("Transforming cpw.mods.bootstraplauncher.BootstrapLauncher");
@@ -127,27 +128,36 @@ public class BootstrapTransformer extends ClassLoader {
             throw new RuntimeException("Cannot find main(String[]) in BootstrapLauncher");
         }
 
-        // Find Consumer.accept(...)
+        // Find Consumer.accept(...) and "NEW ModuleClassLoader" and "ModuleClassLoader.<init>"
         var insns = asmMain.instructions;
-        MethodInsnNode injectionPoint = null;
-        for (int i = 0; i < insns.size(); i++) {
-            if (insns.get(i) instanceof MethodInsnNode invoke) {
+        MethodInsnNode serviceAccept = null;
+        TypeInsnNode newCl = null;
+        MethodInsnNode initCl = null;
+        for (var insn: insns) {
+            if (insn instanceof MethodInsnNode invoke) {
                 if ("java/util/function/Consumer".equals(invoke.owner)
                         && "accept".equals(invoke.name)) {
-                    injectionPoint = invoke;
-                    break;
+                    serviceAccept = invoke;
+                } else if ("cpw/mods/cl/ModuleClassLoader".equals(invoke.owner)
+                        && "<init>".equals(invoke.name)) {
+                    initCl = invoke;
+                }
+            } else if (insn instanceof TypeInsnNode typed) {
+                if (Opcodes.NEW == typed.getOpcode()
+                        && "cpw/mods/cl/ModuleClassLoader".equals(typed.desc)) {
+                    newCl = typed;
                 }
             }
         }
-        if (injectionPoint == null) {
+        if (serviceAccept == null || newCl == null || initCl == null) {
             throw new RuntimeException("BootstrapTransformer failed to transform BootstrapLauncher: Consumer.accept(String[]) not found");
         }
 
         // Apply transformation
-        // Raw: [SERVICE].accept(args);
-        // Modified: BootstrapTransformer.onInvoke$BootstrapLauncher(...);
-        var createArclightBoot = new InsnList();
         {
+            // Raw: [SERVICE].accept(args);
+            // Modified: BootstrapTransformer.onInvoke$BootstrapLauncher(...);
+            var createArclightBoot = new InsnList();
             var popArgsThenService = new InsnNode(Opcodes.POP2);
             var aloadArgs = new VarInsnNode(Opcodes.ALOAD, 0);
             var aloadModuleCl = new VarInsnNode(Opcodes.ALOAD, 15);
@@ -161,9 +171,20 @@ public class BootstrapTransformer extends ClassLoader {
             createArclightBoot.add(aloadArgs);
             createArclightBoot.add(aloadModuleCl);
             createArclightBoot.add(onInvoke);
+            insns.insert(serviceAccept, createArclightBoot);
+            insns.remove(serviceAccept);
         }
-        insns.insert(injectionPoint, createArclightBoot);
-        insns.remove(injectionPoint);
+        /*final var targetCl = "io/izzel/arclight/boot/ArclightBootstrapClassLoader";
+        {
+            // Raw: NEW ModuleClassLoader
+            // Modified: NEW ArclightBootstrapClassLoader
+            newCl.desc = targetCl;
+        }
+        {
+            // Raw: ModuleClassLoader.<init>(...)
+            // Modified: ArclightBootstrapClassLoader.<init>(...)
+            initCl.owner = targetCl;
+        }*/
 
         // Save transformed class
         var cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);

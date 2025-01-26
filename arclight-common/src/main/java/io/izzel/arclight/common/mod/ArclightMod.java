@@ -1,9 +1,9 @@
 package io.izzel.arclight.common.mod;
 
+import io.izzel.arclight.common.mod.compat.CommandNodeHooks;
 import io.izzel.arclight.common.mod.server.event.ArclightEventDispatcherRegistry;
 import io.izzel.arclight.common.mod.util.log.ArclightI18nLogger;
 import net.minecraftforge.fml.IExtensionPoint;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.network.NetworkConstants;
@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 
 @Mod("arclight")
 public class ArclightMod {
@@ -28,6 +29,15 @@ public class ArclightMod {
         ArclightEventDispatcherRegistry.registerAllEventDispatchers();
         context.registerExtensionPoint(IExtensionPoint.DisplayTest.class,
             () -> new IExtensionPoint.DisplayTest(() -> NetworkConstants.IGNORESERVERONLY, (a, b) -> true));
+        System.out.println(CommandNodeHooks.class);
+        try {
+            Class<?> clz = Class.forName("com.google.gson.internal.bind.TypeAdapters$EnumTypeAdapter", true, Thread.currentThread().getContextClassLoader());
+            Field f = clz.getDeclaredField("placeholder");
+            f.setAccessible(true);
+            System.out.println(f.get(null));
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static class LoggingPrintStream extends PrintStream {

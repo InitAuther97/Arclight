@@ -1,7 +1,5 @@
 package io.izzel.arclight.boot.application;
 
-import cpw.mods.cl.ModuleClassLoader;
-
 import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;

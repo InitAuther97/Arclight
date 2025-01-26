@@ -35,7 +35,7 @@ import java.util.jar.Manifest;
 
 public class ModBootstrap extends AbstractBootstrap {
 
-    public static record ModBoot(Configuration configuration, ClassLoader parent) {}
+    public record ModBoot(Configuration configuration, ClassLoader parent) {}
 
     private static ModBoot modBoot;
 
@@ -75,7 +75,7 @@ public class ModBootstrap extends AbstractBootstrap {
     }
 
     private void inject() throws Throwable {
-        dirtyHacks();
+        // dirtyHacks();
         setupMod();
         injectClassPath();
         injectLaunchPlugin();
