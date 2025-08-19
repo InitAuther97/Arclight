@@ -66,12 +66,15 @@ public abstract class ChunkHolderMixin extends GenerationChunkHolder implements 
         callEventIfUnloading(manager);
     }
 
+    @Override
+    public boolean arclight$isCurrentlyUnloading() {
+        FullChunkStatus old = ChunkLevel.fullStatus(oldTicketLevel);
+        FullChunkStatus current = ChunkLevel.fullStatus(ticketLevel);
+        return old.isOrAfter(FullChunkStatus.FULL) && !current.isOrAfter(FullChunkStatus.FULL);
+    }
+
     protected void callEventIfUnloading(ChunkMap manager) {
-        FullChunkStatus oldFullChunkStatus = ChunkLevel.fullStatus(this.oldTicketLevel);
-        FullChunkStatus newFullChunkStatus = ChunkLevel.fullStatus(this.ticketLevel);
-        boolean oldIsFull = oldFullChunkStatus.isOrAfter(FullChunkStatus.FULL);
-        boolean newIsFull = newFullChunkStatus.isOrAfter(FullChunkStatus.FULL);
-        if (oldIsFull && !newIsFull) {
+        if (arclight$isCurrentlyUnloading()) {
             if (arclight$pendingUnload) {
                 return;
             }
@@ -100,6 +103,29 @@ public abstract class ChunkHolderMixin extends GenerationChunkHolder implements 
         }
     }
 
+    protected void callEventIfLoading(ChunkMap manager) {
+        arclight$pendingUnload = false;
+        FullChunkStatus fullChunkStatus = ChunkLevel.fullStatus(this.oldTicketLevel);
+        FullChunkStatus fullChunkStatus2 = ChunkLevel.fullStatus(this.ticketLevel);
+        this.oldTicketLevel = this.ticketLevel;
+        if (!fullChunkStatus.isOrAfter(FullChunkStatus.FULL) && fullChunkStatus2.isOrAfter(FullChunkStatus.FULL)) {
+            this.getFullChunkFuture().thenAccept((either) -> {
+                LevelChunk chunk = either.orElse(null);
+                if (chunk != null) {
+                    ((ChunkMapBridge) manager).bridge$getCallbackExecutor().execute(
+                            ((ChunkBridge) chunk)::bridge$loadCallback
+                    );
+                }
+            }).exceptionally((throwable) -> {
+                // ensure exceptions are printed, by default this is not the case
+                ArclightServer.LOGGER.fatal("Failed to schedule load callback for chunk " + this.pos, throwable);
+                return null;
+            });
+
+            ((ChunkMapBridge) manager).bridge$getCallbackExecutor().run();
+        }
+    }
+
     @Inject(method = "blockChanged", cancellable = true,
             at = @At(value = "FIELD", ordinal = 0, target = "Lnet/minecraft/server/level/ChunkHolder;changedBlocksPerSection:[Lit/unimi/dsi/fastutil/shorts/ShortSet;"))
     private void arclight$outOfBound(BlockPos pos, CallbackInfo ci) {
@@ -112,25 +138,6 @@ public abstract class ChunkHolderMixin extends GenerationChunkHolder implements 
     // Note that this logic is slightly different from the one above
     @Inject(method = "updateFutures", at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/server/level/ChunkHolder$LevelChangeListener;onLevelChange(Lnet/minecraft/world/level/ChunkPos;Ljava/util/function/IntSupplier;ILjava/util/function/IntConsumer;)V"))
     private void arclight$onChunkLoad(ChunkMap chunkManager, Executor executor, CallbackInfo ci) {
-        arclight$pendingUnload = false;
-        FullChunkStatus fullChunkStatus = ChunkLevel.fullStatus(this.oldTicketLevel);
-        FullChunkStatus fullChunkStatus2 = ChunkLevel.fullStatus(this.ticketLevel);
-        this.oldTicketLevel = this.ticketLevel;
-        if (!fullChunkStatus.isOrAfter(FullChunkStatus.FULL) && fullChunkStatus2.isOrAfter(FullChunkStatus.FULL)) {
-            this.getFullChunkFuture().thenAccept((either) -> {
-                LevelChunk chunk = either.orElse(null);
-                if (chunk != null) {
-                    ((ChunkMapBridge) chunkManager).bridge$getCallbackExecutor().execute(
-                            ((ChunkBridge) chunk)::bridge$loadCallback
-                    );
-                }
-            }).exceptionally((throwable) -> {
-                // ensure exceptions are printed, by default this is not the case
-                ArclightServer.LOGGER.fatal("Failed to schedule load callback for chunk " + this.pos, throwable);
-                return null;
-            });
-
-            ((ChunkMapBridge) chunkManager).bridge$getCallbackExecutor().run();
-        }
+        callEventIfLoading(chunkManager);
     }
 }

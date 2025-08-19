@@ -79,4 +79,6 @@ public interface WorldBridge extends IWorldWriterBridge, IWorldBridge, InjectLev
     }
 
     default void bridge$platform$endCaptureBlockBreak() {}
+
+    Thread arclight$getMainThread();
 }

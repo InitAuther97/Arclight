@@ -12,4 +12,6 @@ public interface ChunkHolderBridge {
     LevelChunk bridge$getFullChunkUnchecked();
 
     void bridge$callEventIfUnloading(ChunkMap manager);
+
+    boolean arclight$isCurrentlyUnloading();
 }
