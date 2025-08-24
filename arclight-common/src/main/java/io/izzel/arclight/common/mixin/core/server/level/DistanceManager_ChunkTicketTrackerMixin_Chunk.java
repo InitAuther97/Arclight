@@ -1,6 +1,7 @@
 package io.izzel.arclight.common.mixin.core.server.level;
 
 import io.izzel.arclight.common.bridge.core.world.server.TicketManagerBridge;
+import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import io.izzel.arclight.mixin.Decorate;
 import io.izzel.arclight.mixin.DecorationOps;
 import net.minecraft.server.level.ChunkHolder;
@@ -12,8 +13,9 @@ import org.spongepowered.asm.mixin.injection.At;
 
 import java.util.Set;
 
+@LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.ABSENT)
 @Mixin(DistanceManager.ChunkTicketTracker.class)
-public class DistanceManager_ChunkTicketTrackerMixin {
+public class DistanceManager_ChunkTicketTrackerMixin_Chunk {
     // @formatter:off
     @Shadow(aliases = {"this$0", "f_140874_", "field_18255"}, remap = false) @Final private DistanceManager outerThis;
     // @formatter:on

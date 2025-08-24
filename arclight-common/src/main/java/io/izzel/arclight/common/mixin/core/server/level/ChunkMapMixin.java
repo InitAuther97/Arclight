@@ -66,8 +66,13 @@ public abstract class ChunkMapMixin implements ChunkMapBridge {
     public final ArclightCallbackExecutor callbackExecutor = new ArclightCallbackExecutor();
 
     @Override
-    public ArclightCallbackExecutor bridge$getCallbackExecutor() {
-        return this.callbackExecutor;
+    public void arclight$addCallback(Runnable callback) {
+        callbackExecutor.execute(callback);
+    }
+
+    @Override
+    public void arclight$runCallbacks() {
+        callbackExecutor.run();
     }
 
     @Override

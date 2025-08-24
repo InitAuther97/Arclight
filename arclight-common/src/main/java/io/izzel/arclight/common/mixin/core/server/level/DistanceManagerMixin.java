@@ -1,10 +1,8 @@
 package io.izzel.arclight.common.mixin.core.server.level;
 
-import io.izzel.arclight.common.bridge.core.world.server.ChunkHolderBridge;
 import io.izzel.arclight.common.bridge.core.world.server.TicketManagerBridge;
 import io.izzel.arclight.mixin.Decorate;
 import io.izzel.arclight.mixin.DecorationOps;
-import io.izzel.arclight.mixin.Local;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.server.level.*;
@@ -15,7 +13,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 
 import java.util.*;
-import java.util.function.Consumer;
 
 @Mixin(DistanceManager.class)
 public abstract class DistanceManagerMixin implements TicketManagerBridge {
@@ -30,22 +27,6 @@ public abstract class DistanceManagerMixin implements TicketManagerBridge {
     @Shadow @Final @Mutable private Set<ChunkHolder> chunksToUpdateFutures;
     @Invoker("purgeStaleTickets") public abstract void bridge$tick();
     // @formatter:on
-
-    @Unique
-    private Queue<ChunkHolder> arclight$scheduleUpdatingQueue = new LinkedList<>();
-
-    @Override
-    public void arclight$offerUpdate(ChunkHolder holder) {
-        arclight$scheduleUpdatingQueue.add(holder);
-    }
-
-    @Decorate(method = "runAllUpdates", inject = true, at = @At(value = "INVOKE", target = "Ljava/util/Set;isEmpty()Z"))
-    private void arclight$runQueuedUpdates(ChunkMap map) {
-        final var queue = arclight$scheduleUpdatingQueue;
-        for (ChunkHolder now = queue.poll(); now != null; now = queue.poll()) {
-            ((ChunkHolderBridge) now).bridge$callEventIfUnloading(map);
-        }
-    }
 
     @Decorate(method = "removePlayer", at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/longs/Long2ObjectMap;get(J)Ljava/lang/Object;"))
     private Object arclight$nullsafeRemovePlayer(Long2ObjectMap<ServerPlayer> instance, long l) throws Throwable {

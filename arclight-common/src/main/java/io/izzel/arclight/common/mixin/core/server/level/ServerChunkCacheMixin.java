@@ -5,9 +5,6 @@ import io.izzel.arclight.common.bridge.core.world.server.ChunkHolderBridge;
 import io.izzel.arclight.common.bridge.core.world.server.ChunkMapBridge;
 import io.izzel.arclight.common.bridge.core.world.server.ServerChunkProviderBridge;
 import io.izzel.arclight.common.bridge.core.world.server.TicketManagerBridge;
-import io.izzel.arclight.mixin.Decorate;
-import io.izzel.arclight.mixin.DecorationOps;
-import io.izzel.arclight.mixin.Local;
 import net.minecraft.server.level.*;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
@@ -68,17 +65,6 @@ public abstract class ServerChunkCacheMixin implements ServerChunkProviderBridge
         distanceManager.updateSimulationDistance(simDistance);
     }
 
-    @Decorate(method = "getChunkFutureMainThread", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerChunkCache;getVisibleChunkIfPresent(J)Lnet/minecraft/server/level/ChunkHolder;"))
-    private ChunkHolder arclight$skipLoadIfUnloading(ServerChunkCache instance, long l, @Local(ordinal = -1) boolean flag) throws Throwable {
-        ChunkHolder holder = (ChunkHolder) DecorationOps.callsite().invoke(instance, l);
-        if (holder != null) {
-            // InitAuther97: (w/o C2ME) need to skip loading the chunk if it's now scheduled to unload.
-            flag = flag && !((ChunkHolderBridge) holder).arclight$isCurrentlyUnloading();
-        }
-        DecorationOps.blackhole().invoke(flag);
-        return holder;
-    }
-
     @Redirect(method = "tickChunks", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/GameRules;getBoolean(Lnet/minecraft/world/level/GameRules$Key;)Z"))
     private boolean arclight$noPlayer(GameRules gameRules, GameRules.Key<GameRules.BooleanValue> key) {
         return gameRules.getBoolean(key) && !this.level.players().isEmpty();
@@ -117,11 +103,5 @@ public abstract class ServerChunkCacheMixin implements ServerChunkProviderBridge
     @Override
     public void bridge$purgeUnload() {
         this.purgeUnload();
-    }
-
-    @Redirect(method = "chunkAbsent", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ChunkHolder;getTicketLevel()I"), require = 0)
-    public int arclight$useOldTicketLevel(ChunkHolder chunkHolder) {
-        // XXX: Disable for C2ME (#1597)
-        return ((ChunkHolderBridge) chunkHolder).bridge$getOldTicketLevel();
     }
 }

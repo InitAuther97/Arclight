@@ -36,7 +36,7 @@ public abstract class ServerChunkCache_MainThreadExecutorMixin extends Blockable
                 return super.pollTask();
             }
         } finally {
-            ((ChunkMapBridge) outer.chunkMap).bridge$getCallbackExecutor().run();
+            ((ChunkMapBridge) outer.chunkMap).arclight$runCallbacks();
             // InitAuther97: drain queued tasks when the server thread is waiting for chunks
             // This carries the AsyncCatcher to ensure no timeout unexpectedly.
             ((MinecraftServerBridge) ArclightServer.getMinecraftServer()).bridge$drainQueuedTasks();

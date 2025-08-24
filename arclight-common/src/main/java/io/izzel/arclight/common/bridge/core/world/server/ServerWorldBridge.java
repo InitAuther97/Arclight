@@ -1,5 +1,7 @@
 package io.izzel.arclight.common.bridge.core.world.server;
 
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import io.izzel.arclight.common.bridge.core.world.WorldBridge;
@@ -27,4 +29,8 @@ public interface ServerWorldBridge extends WorldBridge {
     boolean bridge$addAllEntitiesSafely(Entity entity, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason);
 
     LevelStorageSource.LevelStorageAccess bridge$getConvertable();
+
+    default void arclight$setUnloadingChunk(ChunkPos pos, LevelChunk unloading) {
+        // no-op
+    }
 }

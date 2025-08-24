@@ -138,7 +138,7 @@ public abstract class LevelChunkMixin extends ChunkAccessMixin implements ChunkB
                 long zRand = random.nextLong() / 2L * 2L + 1L;
                 random.setSeed((long) this.chunkPos.x * xRand + (long) this.chunkPos.z * zRand ^ ((ServerLevel) level).getSeed());
 
-                org.bukkit.World world = ((WorldBridge) this.level).bridge$getWorld();
+                org.bukkit.World world = this.level.bridge$getWorld();
                 if (world != null) {
                     ((WorldBridge) this.level).bridge$setPopulating(true);
                     try {
