@@ -13,5 +13,11 @@ description='''
     Arclight bukkit layer for NeoForge
     '''
 
+[[dependencies.arclight]]
+modId="c2me"
+type="optional"
+reason="requires >= 0.3.0"
+versionRange = "[0.3,)"
+
 [[accessTransformers]]
 file="META-INF/accesstransformer.cfg"

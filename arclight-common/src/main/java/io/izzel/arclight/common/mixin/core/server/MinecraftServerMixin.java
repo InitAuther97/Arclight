@@ -7,6 +7,7 @@ import io.izzel.arclight.common.bridge.core.command.CommandSourceBridge;
 import io.izzel.arclight.common.bridge.core.server.MinecraftServerBridge;
 import io.izzel.arclight.common.bridge.core.world.WorldBridge;
 import io.izzel.arclight.common.mod.ArclightConstants;
+import io.izzel.arclight.common.mod.compat.CompatChecker;
 import io.izzel.arclight.common.mod.mixins.annotation.TransformAccess;
 import io.izzel.arclight.common.mod.server.ArclightServer;
 import io.izzel.arclight.common.mod.server.BukkitRegistry;
@@ -229,6 +230,11 @@ public abstract class MinecraftServerMixin extends ReentrantBlockableEventLoop<T
         DecorationOps.blackhole().invoke(tickSection, tickCount);
         currentTick = (int) (System.currentTimeMillis() / 50);
         DecorationOps.callsite().invoke(instance);
+    }
+
+    @Inject(method = "runServer", at = @At("HEAD"))
+    private void arclight$checkCompatibility(CallbackInfo ci) {
+        CompatChecker.check();
     }
 
     @Decorate(method = "runServer", at = @At(value = "INVOKE", remap = false, target = "Lorg/slf4j/Logger;warn(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;)V"))

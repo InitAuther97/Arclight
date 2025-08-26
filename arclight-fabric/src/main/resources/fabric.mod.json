@@ -21,6 +21,9 @@
     "fabricloader": ">=0.16",
     "fabric-permissions-api-v0": ">=0.3"
   },
+  "breaks": {
+    "c2me": "<0.3"
+  },
   "entrypoints": {
     "main": [
       "io.izzel.arclight.fabric.ArclightModEntrypoint"

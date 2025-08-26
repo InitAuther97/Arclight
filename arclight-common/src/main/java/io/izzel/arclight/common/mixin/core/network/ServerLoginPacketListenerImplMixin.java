@@ -8,6 +8,7 @@ import io.izzel.arclight.common.bridge.core.network.common.ServerCommonPacketLis
 import io.izzel.arclight.common.bridge.core.network.login.ServerLoginPacketListenerBridge;
 import io.izzel.arclight.common.bridge.core.server.MinecraftServerBridge;
 import io.izzel.arclight.common.bridge.core.server.management.PlayerListBridge;
+import io.izzel.arclight.common.mod.server.ArclightServer;
 import io.izzel.arclight.common.mod.util.VelocitySupport;
 import net.minecraft.DefaultUncaughtExceptionHandler;
 import net.minecraft.Util;
@@ -161,12 +162,14 @@ public abstract class ServerLoginPacketListenerImplMixin implements ServerLoginP
                 gameProfile.getProperties().put(property.name(), property);
             }
         }
+        LOGGER.info("Created offline profile for {}, uuid is {}", name, uuid);
         return gameProfile;
     }
 
     @Redirect(method = "verifyLoginAndFinishConnectionSetup", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/players/PlayerList;canPlayerLogin(Ljava/net/SocketAddress;Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/network/chat/Component;"))
     private Component arclight$canLogin(PlayerList instance, SocketAddress socketAddress, GameProfile gameProfile) {
         if (this.player == null) {
+            LOGGER.info("Creating new player object for {}, uuid is {}", gameProfile.getName(), gameProfile.getId());
             this.player = ((PlayerListBridge) instance).bridge$canPlayerLogin(socketAddress, gameProfile, (ServerLoginPacketListenerImpl) (Object) this);
         }
         return null;
@@ -244,6 +247,7 @@ public abstract class ServerLoginPacketListenerImplMixin implements ServerLoginP
                     if (!connection.isConnected()) {
                         return;
                     }
+                    LOGGER.info("Received player info from Authlib for {}, uuid is {}", gameProfile.getName(), gameProfile.getId());
                     bridge$preLogin(gameProfile);
                 } else if (server.isSingleplayer()) {
                     LOGGER.warn("Failed to verify username but will let them in anyway!");
@@ -364,6 +368,7 @@ public abstract class ServerLoginPacketListenerImplMixin implements ServerLoginP
             }
             this.connection.address = new java.net.InetSocketAddress(VelocitySupport.readAddress(buf), port);
             this.authenticatedProfile = VelocitySupport.createProfile(buf);
+            LOGGER.info("Received player info from Velocity for {}, uuid is {}", authenticatedProfile.getName(), authenticatedProfile.getId());
 
             // Proceed with login
             Util.backgroundExecutor().execute(() -> {

@@ -6,10 +6,14 @@ import io.izzel.arclight.common.bridge.core.world.server.ServerChunkProviderBrid
 import io.izzel.arclight.common.mod.server.ArclightServer;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.util.thread.BlockableEventLoop;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(targets = "net.minecraft.server.level.ServerChunkCache$MainThreadExecutor")
 public abstract class ServerChunkCache_MainThreadExecutorMixin extends BlockableEventLoop<Runnable> {
@@ -20,6 +24,11 @@ public abstract class ServerChunkCache_MainThreadExecutorMixin extends Blockable
 
     protected ServerChunkCache_MainThreadExecutorMixin(String nameIn) {
         super(nameIn);
+    }
+
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void arclight$bindExecutor(ServerChunkCache chunkSource, Level level, CallbackInfo ci) {
+        ((ServerChunkProviderBridge) chunkSource).arclight$setMainThreadExecutor(this);
     }
 
     /**

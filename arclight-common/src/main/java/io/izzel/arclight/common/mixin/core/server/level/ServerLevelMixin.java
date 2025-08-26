@@ -44,6 +44,7 @@ import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.progress.ChunkProgressListener;
+import net.minecraft.server.players.PlayerList;
 import net.minecraft.util.ProgressListener;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
@@ -213,7 +214,19 @@ public abstract class ServerLevelMixin extends LevelMixin implements ServerWorld
             raw = new CustomChunkGenerator((ServerLevel)(Object) this, raw, generator);
         }
         // CraftBukkit end
+
+        this.spigotConfig = new SpigotWorldConfig(worldInfo.getLevelName());
         return raw;
+    }
+
+    @Redirect(method = "<init>", require = 0, at = @At(value = "INVOKE", target = "Lnet/minecraft/server/players/PlayerList;getViewDistance()I"))
+    private int arclight$getViewDistance(PlayerList playerList) {
+        return spigotConfig.viewDistance;
+    }
+
+    @Redirect(method = "<init>", require = 0, at = @At(value = "INVOKE", target = "Lnet/minecraft/server/players/PlayerList;getSimulationDistance()I"))
+    private int arclight$getSimulationDistance(PlayerList playerList) {
+        return spigotConfig.simulationDistance;
     }
 
     @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;getWorldData()Lnet/minecraft/world/level/storage/WorldData;"))
@@ -247,10 +260,7 @@ public abstract class ServerLevelMixin extends LevelMixin implements ServerWorld
                 }
             }
         }
-        this.spigotConfig = new SpigotWorldConfig(worldInfo.getLevelName());
         this.uuid = WorldUUID.getUUID(levelSave.getDimensionPath(this.dimension()).toFile());
-        ((ServerChunkProviderBridge) this.chunkSource).bridge$setViewDistance(spigotConfig.viewDistance);
-        ((ServerChunkProviderBridge) this.chunkSource).bridge$setSimulationDistance(spigotConfig.simulationDistance);
         ((WorldInfoBridge) this.K).bridge$setWorld((ServerLevel) (Object) this);
         var data = this.getDataStorage().computeIfAbsent(LevelPersistentData.factory(), "bukkit_pdc");
         this.bridge$getWorld().readBukkitValues(data.getTag());

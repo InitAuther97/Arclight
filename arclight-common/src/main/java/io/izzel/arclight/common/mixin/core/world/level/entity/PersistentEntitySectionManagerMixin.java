@@ -1,6 +1,7 @@
 package io.izzel.arclight.common.mixin.core.world.level.entity;
 
 import io.izzel.arclight.common.bridge.core.entity.EntityBridge;
+import io.izzel.arclight.common.bridge.core.world.level.entity.PersistentEntitySectionManagerBridge;
 import io.izzel.arclight.mixin.Decorate;
 import io.izzel.arclight.mixin.Local;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -31,7 +32,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Mixin(PersistentEntitySectionManager.class)
-public abstract class PersistentEntitySectionManagerMixin<T extends EntityAccess> {
+public abstract class PersistentEntitySectionManagerMixin<T extends EntityAccess> implements PersistentEntitySectionManagerBridge {
 
     // @formatter:off
     @Shadow public abstract void close() throws IOException;

@@ -3,6 +3,7 @@ package io.izzel.arclight.common.mixin.core.world.level.chunk;
 import io.izzel.arclight.common.bridge.core.world.WorldBridge;
 import io.izzel.arclight.common.bridge.core.world.chunk.ChunkAccessBridge;
 import io.izzel.arclight.common.bridge.core.world.chunk.ChunkBridge;
+import io.izzel.arclight.common.bridge.core.world.server.ServerWorldBridge;
 import io.izzel.arclight.common.mod.util.DistValidate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -120,45 +121,60 @@ public abstract class LevelChunkMixin extends ChunkAccessMixin implements ChunkB
 
     public void loadCallback() {
         org.bukkit.Server server = Bukkit.getServer();
-        if (server != null) {
+        if (server != null && level instanceof ServerWorldBridge bridge) {
             /*
              * If it's a new world, the first few chunks are generated inside
              * the World constructor. We can't reliably alter that, so we have
              * no way of creating a CraftWorld/CraftServer at that point.
              */
-
             var bukkitChunk = new CraftChunk((LevelChunk) (Object) this);
-            server.getPluginManager().callEvent(new ChunkLoadEvent(bukkitChunk, this.needsDecoration));
-
-            if (this.needsDecoration) {
-                this.needsDecoration = false;
-                java.util.Random random = new java.util.Random();
-                random.setSeed(((ServerLevel) level).getSeed());
-                long xRand = random.nextLong() / 2L * 2L + 1L;
-                long zRand = random.nextLong() / 2L * 2L + 1L;
-                random.setSeed((long) this.chunkPos.x * xRand + (long) this.chunkPos.z * zRand ^ ((ServerLevel) level).getSeed());
+            try {
+                bridge.arclight$setChunkEvent(chunkPos.toLong(), (LevelChunk) (Object) this);
+                server.getPluginManager().callEvent(new ChunkLoadEvent(bukkitChunk, this.needsDecoration));
 
                 org.bukkit.World world = this.level.bridge$getWorld();
-                if (world != null) {
-                    ((WorldBridge) this.level).bridge$setPopulating(true);
-                    try {
-                        for (org.bukkit.generator.BlockPopulator populator : world.getPopulators()) {
-                            populator.populate(world, random, bukkitChunk);
-                        }
-                    } finally {
-                        ((WorldBridge) this.level).bridge$setPopulating(false);
+                if (this.needsDecoration) {
+                    this.needsDecoration = false;
+                    if (world == null || world.getPopulators().isEmpty()) {
+                        return;
                     }
+                    java.util.Random random = new java.util.Random();
+                    random.setSeed(((ServerLevel) level).getSeed());
+                    long xRand = random.nextLong() / 2L * 2L + 1L;
+                    long zRand = random.nextLong() / 2L * 2L + 1L;
+                    random.setSeed((long) this.chunkPos.x * xRand + (long) this.chunkPos.z * zRand ^ ((ServerLevel) level).getSeed());
+
+                    if (world != null) {
+                        bridge.bridge$setPopulating(true);
+                        try {
+                            for (org.bukkit.generator.BlockPopulator populator : world.getPopulators()) {
+                                populator.populate(world, random, bukkitChunk);
+                            }
+                        } finally {
+                            bridge.bridge$setPopulating(false);
+                        }
+                    }
+                    server.getPluginManager().callEvent(new org.bukkit.event.world.ChunkPopulateEvent(bukkitChunk));
                 }
-                server.getPluginManager().callEvent(new org.bukkit.event.world.ChunkPopulateEvent(bukkitChunk));
+            } finally {
+                bridge.arclight$setChunkEvent(Long.MAX_VALUE, null);
             }
         }
     }
 
     public void unloadCallback() {
+        if (!(level instanceof ServerWorldBridge bridge)) {
+            return;
+        }
         org.bukkit.Server server = Bukkit.getServer();
         var bukkitChunk = new CraftChunk((LevelChunk) (Object) this);
         org.bukkit.event.world.ChunkUnloadEvent unloadEvent = new org.bukkit.event.world.ChunkUnloadEvent(bukkitChunk, this.isUnsaved());
-        server.getPluginManager().callEvent(unloadEvent);
+        try {
+            bridge.arclight$setChunkEvent(chunkPos.toLong(), (LevelChunk)(Object) this);
+            server.getPluginManager().callEvent(unloadEvent);
+        } finally {
+            bridge.arclight$setChunkEvent(Long.MAX_VALUE, null);
+        }
         // note: saving can be prevented, but not forced if no saving is actually required
         this.mustNotSave = !unloadEvent.isSaveChunk();
     }

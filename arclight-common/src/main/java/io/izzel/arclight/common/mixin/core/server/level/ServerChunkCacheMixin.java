@@ -6,6 +6,7 @@ import io.izzel.arclight.common.bridge.core.world.server.ChunkMapBridge;
 import io.izzel.arclight.common.bridge.core.world.server.ServerChunkProviderBridge;
 import io.izzel.arclight.common.bridge.core.world.server.TicketManagerBridge;
 import net.minecraft.server.level.*;
+import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -20,6 +21,7 @@ import org.spongepowered.asm.mixin.injection.*;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.function.BooleanSupplier;
 
 @Mixin(ServerChunkCache.class)
 public abstract class ServerChunkCacheMixin implements ServerChunkProviderBridge {
@@ -35,6 +37,8 @@ public abstract class ServerChunkCacheMixin implements ServerChunkProviderBridge
     @Invoker("runDistanceManagerUpdates") public abstract boolean bridge$tickDistanceManager();
     @Accessor("lightEngine") public abstract ThreadedLevelLightEngine bridge$getLightManager();
     // @formatter:on
+
+    private BlockableEventLoop<Runnable> arclight$mainThreadExecutor;
 
     public boolean isChunkLoaded(final int chunkX, final int chunkZ) {
         //bridge$chunkHolderAt is getUpdatingChunkIfPresent
@@ -56,13 +60,13 @@ public abstract class ServerChunkCacheMixin implements ServerChunkProviderBridge
     }
 
     @Override
-    public void bridge$setViewDistance(int viewDistance) {
-        ((ChunkMapBridge) this.chunkMap).bridge$setViewDistance(viewDistance);
+    public void arclight$setMainThreadExecutor(BlockableEventLoop<Runnable> executor) {
+        this.arclight$mainThreadExecutor = executor;
     }
 
     @Override
-    public void bridge$setSimulationDistance(int simDistance) {
-        distanceManager.updateSimulationDistance(simDistance);
+    public void arclight$managedBlockOnExecutor(BooleanSupplier until) {
+        arclight$mainThreadExecutor.managedBlock(until);
     }
 
     @Redirect(method = "tickChunks", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/GameRules;getBoolean(Lnet/minecraft/world/level/GameRules$Key;)Z"))
