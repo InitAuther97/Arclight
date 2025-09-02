@@ -13,9 +13,13 @@ public interface ChunkMapBridge {
 
     void bridge$tickEntityTracker();
 
-    void arclight$addCallback(Runnable callback);
+    default void arclight$addCallback(Runnable callback) {
+        // no-op
+    }
 
-    void arclight$runCallbacks();
+    default void arclight$runCallbacks() {
+        // no-op
+    }
 
     ChunkHolder bridge$chunkHolderAt(long chunkPos);
 

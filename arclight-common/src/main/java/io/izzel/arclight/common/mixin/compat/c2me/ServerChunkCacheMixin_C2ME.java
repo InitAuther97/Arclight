@@ -6,15 +6,19 @@ import io.izzel.arclight.common.mod.server.ArclightServer;
 import io.izzel.arclight.common.mod.server.world.IllegalChunkAccessException;
 import io.izzel.arclight.mixin.Decorate;
 import io.izzel.arclight.mixin.DecorationOps;
+import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.concurrent.CompletableFuture;
 
 @LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
 @Mixin(ServerChunkCache.class)
@@ -30,20 +34,15 @@ public abstract class ServerChunkCacheMixin_C2ME implements ServerChunkProviderB
     @Unique
     private LevelChunk arclight$currentChunk = null;
 
-    @Inject(method = "getChunk", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiling/ProfilerFiller;incrementCounter(Ljava/lang/String;)V", ordinal = 1), cancellable = true)
-    private void arclight$shortcutGetChunk(int chunkX, int chunkZ, ChunkStatus status, boolean generate, CallbackInfoReturnable<LevelChunk> cir) {
+    @Inject(method = "getChunkFutureMainThread", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;getProfiler()Lnet/minecraft/util/profiling/ProfilerFiller;"), cancellable = true)
+    private void arclight$shortcutGetChunk(int chunkX, int chunkZ, ChunkStatus status, boolean generate, CallbackInfoReturnable<CompletableFuture<ChunkResult<ChunkAccess>>> cir) {
         if (this.arclight$currentChunkEvent != Long.MAX_VALUE) {
             if (arclight$currentChunkEvent != ChunkPos.asLong(chunkX, chunkZ)) {
-                if (generate) {
-                    RuntimeException ex = new IllegalChunkAccessException(this.level.dimension.location(), new ChunkPos(arclight$currentChunkEvent), new ChunkPos(chunkX, chunkZ));
-                    ArclightServer.LOGGER.error("Detected an illegal chunk request during chunk event. This will lead to a dangerous undefined behaviour! Report this to the author of the respective plugin or mod!", ex);
-                    throw ex;
-                } else {
-                    ArclightServer.LOGGER.warn("Rejected optional chunk loading during chunk event in {} at ({},{})", level.dimension.location(), chunkX, chunkZ);
-                    cir.setReturnValue(null);
-                }
+                RuntimeException ex = new IllegalChunkAccessException(this.level.dimension.location(), new ChunkPos(arclight$currentChunkEvent), new ChunkPos(chunkX, chunkZ));
+                ArclightServer.LOGGER.error("Detected an illegal chunk request during chunk event. This will lead to a dangerous undefined behaviour! Report this to the author of the respective plugin or mod!", ex);
+                throw ex;
             } else if (this.arclight$currentChunk != null) {
-                cir.setReturnValue(this.arclight$currentChunk);
+                cir.setReturnValue(CompletableFuture.completedFuture(ChunkResult.of(this.arclight$currentChunk)));
             }
         }
     }

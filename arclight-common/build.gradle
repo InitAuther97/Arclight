@@ -1,5 +1,6 @@
 plugins {
     id 'architectury-plugin' version "${architect_plugin_version}"
+    id "lol.bai.explosion" version "0.1.0"
     id 'java'
     id 'idea'
 }
@@ -14,7 +15,29 @@ loom {
     accessWidenerPath = file("src/main/resources/arclight.accesswidener")
 }
 
+repositories {
+    maven {
+        url "https://maven4.bai.lol"
+        content {
+            includeGroupByRegex "lol.bai.*"
+        }
+    }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
+}
+
 dependencies {
+    modCompileOnly explosion.fabric("maven.modrinth:c2me-fabric:0.3.0+alpha.0.320+1.21.1")
+
     minecraft "com.mojang:minecraft:$minecraftVersion"
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:$fabricLoaderVersion"

@@ -8,10 +8,13 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "c2me.ChunkHolderMixin_C2ME",
-    "c2me.ChunkMapMixin_C2ME",
     "c2me.CraftChunkMixin_C2ME",
+    "c2me.ItemHolderMixin",
+    "c2me.MinecraftServerMixin_C2ME",
+    "c2me.NewChunkHolderVanillaInterfaceMixin",
     "c2me.ServerAccessibleMixin",
     "c2me.ServerChunkCacheMixin_C2ME",
-    "c2me.ServerLevelMixin_C2ME"
+    "c2me.ServerLevelMixin_C2ME",
+    "c2me.StatusAdvancingSchedulerMixin"
   ]
 }

@@ -3,6 +3,7 @@ package io.izzel.arclight.common.mixin.compat.c2me;
 import io.izzel.arclight.common.bridge.core.world.level.entity.PersistentEntitySectionManagerBridge;
 import io.izzel.arclight.common.bridge.core.world.server.ServerChunkProviderBridge;
 import io.izzel.arclight.common.bridge.inject.InjectEntityBridge;
+import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import io.izzel.arclight.common.mod.server.ArclightServer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.entity.PersistentEntitySectionManager;
@@ -17,6 +18,7 @@ import org.spongepowered.asm.mixin.Shadow;
 
 import java.util.Objects;
 
+@LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
 @Mixin(CraftChunk.class)
 public abstract class CraftChunkMixin_C2ME {
 

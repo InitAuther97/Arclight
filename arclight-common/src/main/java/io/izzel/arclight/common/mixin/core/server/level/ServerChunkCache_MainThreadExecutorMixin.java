@@ -45,6 +45,7 @@ public abstract class ServerChunkCache_MainThreadExecutorMixin extends Blockable
                 return super.pollTask();
             }
         } finally {
+            // InitAuther97: this is no-op when C2ME is present
             ((ChunkMapBridge) outer.chunkMap).arclight$runCallbacks();
             // InitAuther97: drain queued tasks when the server thread is waiting for chunks
             // This carries the AsyncCatcher to ensure no timeout unexpectedly.

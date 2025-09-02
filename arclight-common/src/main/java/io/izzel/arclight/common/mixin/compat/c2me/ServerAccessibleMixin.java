@@ -1,30 +1,50 @@
 package io.izzel.arclight.common.mixin.compat.c2me;
 
-import io.izzel.arclight.common.mod.compat.C2MECompat;
+import com.ishland.c2me.rewrites.chunksystem.common.ChunkLoadingContext;
+import com.ishland.c2me.rewrites.chunksystem.common.ChunkState;
+import com.ishland.c2me.rewrites.chunksystem.common.NewChunkHolderVanillaInterface;
+import com.ishland.c2me.rewrites.chunksystem.common.NewChunkStatus;
+import com.ishland.flowsched.scheduler.Cancellable;
+import com.ishland.flowsched.scheduler.ItemHolder;
+import com.ishland.flowsched.scheduler.ItemStatus;
+import io.izzel.arclight.common.bridge.compat.c2me.*;
 import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
-import io.izzel.arclight.mixin.Decorate;
-import io.izzel.arclight.mixin.Local;
-import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.ChunkPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
 @Pseudo
 @Mixin(targets = "com.ishland.c2me.rewrites.chunksystem.common.statuses.ServerAccessible", remap = false)
-public class ServerAccessibleMixin {
+public abstract class ServerAccessibleMixin extends NewChunkStatus implements ServerAccessibleBridge {
 
-    @Decorate(method = "lambda$upgradeToThis$0", at = @At("TAIL"), inject = true)
-    private static void arclight$afterChunkAccessible(@Local(ordinal = -1) LevelChunk fullChunk) {
-        C2MECompat.callChunkLoad(fullChunk);
+    ServerAccessibleMixin() {
+        super(-1, null);
     }
 
-    @Inject(method = "lambda$downgradeFromThis$3", at = @At("HEAD"))
-    private static void arclight$beforeChunkInaccessible(@Coerce Object ctx, ChunkAccess chunk, @Coerce Object chunkState, CallbackInfo ci) {
-        C2MECompat.callChunkUnload((LevelChunk) chunk);
+    public void arclight$updateStatusBusy(ItemHolder<ChunkPos, ChunkState, ChunkLoadingContext, NewChunkHolderVanillaInterface> holder, ItemStatus<?, ChunkState, ChunkLoadingContext> going) {
+        NewChunkHolderVanillaInterfaceBridge chunkHolder = (NewChunkHolderVanillaInterfaceBridge) holder.getUserData().get();
+        chunkHolder.arclight$cancelIfNecessary(ordinal() < going.ordinal());
+    }
+
+    @Inject(method = "upgradeToThis*", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;runAsync(Ljava/lang/Runnable;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;"))
+    private void arclight$scheduleLoad(ChunkLoadingContext ctx, Cancellable cancellable, CallbackInfoReturnable<CompletableFuture<?>> cir) {
+        ItemHolder<?, ChunkState, ChunkLoadingContext, NewChunkHolderVanillaInterface> holder = ctx.holder();
+        NewChunkHolderVanillaInterfaceBridge chunkHolder = (NewChunkHolderVanillaInterfaceBridge) holder.getUserData().get();
+        chunkHolder.arclight$scheduleLoad(ctx);
+    }
+
+    @Redirect(method = "downgradeFromThis*", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;runAsync(Ljava/lang/Runnable;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;"))
+    private CompletableFuture<?> arclight$scheduleUnload(Runnable action, Executor executor, ChunkLoadingContext ctx) {
+        ItemHolder<?, ChunkState, ChunkLoadingContext, NewChunkHolderVanillaInterface> holder = ctx.holder();
+        NewChunkHolderVanillaInterfaceBridge chunkHolder = (NewChunkHolderVanillaInterfaceBridge) holder.getUserData().get();
+        return chunkHolder.arclight$scheduleUnload(ctx).thenRunAsync(action, executor);
     }
 }

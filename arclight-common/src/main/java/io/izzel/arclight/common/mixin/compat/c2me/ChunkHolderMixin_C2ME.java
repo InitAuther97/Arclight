@@ -5,17 +5,23 @@ import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import io.izzel.arclight.common.mod.server.ArclightServer;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 
-@LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
+import java.util.concurrent.CompletableFuture;
+
+@LoadIfMod(modid = "c3me", condition = LoadIfMod.ModCondition.PRESENT)
 @Mixin(ChunkHolder.class)
 public abstract class ChunkHolderMixin_C2ME extends GenerationChunkHolder implements ChunkHolderBridge {
 
-    private ChunkHolderMixin_C2ME(ChunkPos chunkPos) {
+    @Shadow public abstract CompletableFuture<ChunkResult<LevelChunk>> getFullChunkFuture();
+
+    protected ChunkHolderMixin_C2ME(ChunkPos chunkPos) {
         super(chunkPos);
     }
 
