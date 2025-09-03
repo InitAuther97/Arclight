@@ -10,14 +10,12 @@ import io.izzel.arclight.common.bridge.compat.c2me.ServerAccessibleBridge;
 import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import net.minecraft.world.level.ChunkPos;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 @LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
-@Pseudo
-@Mixin(targets = "com.ishland.flowsched.scheduler.StatusAdvancingScheduler")
+@Mixin(targets = "com.ishland.flowsched.scheduler.StatusAdvancingScheduler", remap = false)
 public class StatusAdvancingSchedulerMixin {
 
     @Inject(method = "tick", locals = LocalCapture.CAPTURE_FAILHARD, slice = @Slice(from = @At(value = "INVOKE", target = "Lcom/ishland/flowsched/scheduler/ItemHolder;isBusy()Z")), at = @At(value = "INVOKE", ordinal = 0, target = "Lcom/ishland/flowsched/scheduler/ItemHolder;consolidateMarkDirty(Lcom/ishland/flowsched/scheduler/StatusAdvancingScheduler;)V"))

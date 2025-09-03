@@ -5,9 +5,9 @@ import io.reactivex.rxjava3.core.Scheduler;
 import io.reactivex.rxjava3.internal.schedulers.ExecutorScheduler;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.thread.BlockableEventLoop;
-import net.minecraft.util.thread.ProcessorMailbox;
 
 import java.util.concurrent.CancellationException;
+import java.util.function.BooleanSupplier;
 
 public class C2MEScope {
 
@@ -24,6 +24,8 @@ public class C2MEScope {
             return this;
         }
     };
+
+    public static final BooleanSupplier TRUE = () -> true;
 
     /**
      * Should not be used to schedule periodic tasks!

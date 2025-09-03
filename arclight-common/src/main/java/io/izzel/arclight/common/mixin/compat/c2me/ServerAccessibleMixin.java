@@ -11,7 +11,6 @@ import io.izzel.arclight.common.bridge.compat.c2me.*;
 import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import net.minecraft.world.level.ChunkPos;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -21,7 +20,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 @LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
-@Pseudo
 @Mixin(targets = "com.ishland.c2me.rewrites.chunksystem.common.statuses.ServerAccessible", remap = false)
 public abstract class ServerAccessibleMixin extends NewChunkStatus implements ServerAccessibleBridge {
 
@@ -42,9 +40,9 @@ public abstract class ServerAccessibleMixin extends NewChunkStatus implements Se
     }
 
     @Redirect(method = "downgradeFromThis*", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;runAsync(Ljava/lang/Runnable;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;"))
-    private CompletableFuture<?> arclight$scheduleUnload(Runnable action, Executor executor, ChunkLoadingContext ctx) {
+    private CompletableFuture<?> arclight$scheduleUnload(Runnable action, Executor executor, ChunkLoadingContext ctx, Cancellable cancellable) {
         ItemHolder<?, ChunkState, ChunkLoadingContext, NewChunkHolderVanillaInterface> holder = ctx.holder();
         NewChunkHolderVanillaInterfaceBridge chunkHolder = (NewChunkHolderVanillaInterfaceBridge) holder.getUserData().get();
-        return chunkHolder.arclight$scheduleUnload(ctx).thenRunAsync(action, executor);
+        return chunkHolder.arclight$scheduleUnload(ctx, cancellable).thenRunAsync(action, executor);
     }
 }
