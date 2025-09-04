@@ -4,6 +4,7 @@ import com.ishland.c2me.rewrites.chunksystem.common.ChunkLoadingContext;
 import com.ishland.c2me.rewrites.chunksystem.common.ChunkState;
 import com.ishland.c2me.rewrites.chunksystem.common.NewChunkHolderVanillaInterface;
 import com.ishland.c2me.rewrites.chunksystem.common.NewChunkStatus;
+import com.ishland.c2me.rewrites.chunksystem.common.statuses.ServerAccessible;
 import com.ishland.flowsched.scheduler.Cancellable;
 import com.ishland.flowsched.scheduler.ItemHolder;
 import com.ishland.flowsched.scheduler.ItemStatus;
@@ -20,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 @LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
-@Mixin(targets = "com.ishland.c2me.rewrites.chunksystem.common.statuses.ServerAccessible", remap = false)
+@Mixin(value = ServerAccessible.class, remap = false)
 public abstract class ServerAccessibleMixin extends NewChunkStatus implements ServerAccessibleBridge {
 
     ServerAccessibleMixin() {

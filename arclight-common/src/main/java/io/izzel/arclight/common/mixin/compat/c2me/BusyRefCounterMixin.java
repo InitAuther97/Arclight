@@ -7,7 +7,7 @@ import io.izzel.arclight.common.mod.server.ArclightServer;
 import it.unimi.dsi.fastutil.objects.ReferenceList;
 import org.spongepowered.asm.mixin.*;
 
-@Mixin(BusyRefCounter.class)
+@Mixin(value = BusyRefCounter.class, remap = false)
 public abstract class BusyRefCounterMixin implements BusyRefCounterBridge {
 
     @Shadow private int counter;
