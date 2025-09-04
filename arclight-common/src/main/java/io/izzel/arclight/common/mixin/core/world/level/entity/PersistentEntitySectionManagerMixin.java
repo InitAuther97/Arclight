@@ -58,33 +58,6 @@ public abstract class PersistentEntitySectionManagerMixin<T extends EntityAccess
         return this.chunkLoadStatuses.get(cord) == PersistentEntitySectionManager.ChunkLoadStatus.PENDING;
     }
 
-    @Unique private boolean arclight$fireEvent = false;
-
-    @Decorate(method = "storeChunkSections", inject = true,
-        at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/entity/EntityPersistentStorage;storeEntities(Lnet/minecraft/world/level/entity/ChunkEntities;)V"))
-    private void arclight$fireUnload(long pos, @Local(ordinal = -1) List<T> list) {
-        if (arclight$fireEvent) {
-            CraftEventFactory.callEntitiesUnloadEvent(((EntityStorage) permanentStorage).level, new ChunkPos(pos),
-                list.stream().map(entity -> (Entity) entity).collect(Collectors.toList()));
-        }
-    }
-
-    @Inject(method = "storeChunkSections", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/entity/EntityPersistentStorage;storeEntities(Lnet/minecraft/world/level/entity/ChunkEntities;)V"))
-    private void arclight$resetFlag(long pos, Consumer<T> consumer, CallbackInfoReturnable<Boolean> cir) {
-        arclight$fireEvent = false;
-    }
-
-    @Inject(method = "processChunkUnload", at = @At("HEAD"))
-    private void arclight$fireEvent(long pChunkPosValue, CallbackInfoReturnable<Boolean> cir) {
-        arclight$fireEvent = true;
-    }
-
-    @Inject(method = "processPendingLoads", locals = LocalCapture.CAPTURE_FAILHARD, at = @At(value = "INVOKE", shift = At.Shift.AFTER, remap = false, target = "Lit/unimi/dsi/fastutil/longs/Long2ObjectMap;put(JLjava/lang/Object;)Ljava/lang/Object;"))
-    private void arclight$fireLoad(CallbackInfo ci, ChunkEntities<T> chunkEntities) {
-        List<Entity> entities = getEntities(chunkEntities.getPos());
-        CraftEventFactory.callEntitiesLoadEvent(((EntityStorage) permanentStorage).level, chunkEntities.getPos(), entities);
-    }
-
     @Inject(method = "unloadEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/entity/EntityAccess;setRemoved(Lnet/minecraft/world/entity/Entity$RemovalReason;)V"))
     private void arclight$unloadCause(EntityAccess entityAccess, CallbackInfo ci) {
         if (entityAccess instanceof EntityBridge bridge) {

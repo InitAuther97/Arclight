@@ -540,6 +540,7 @@
     "world.level.dimension.end.DragonRespawnAnimation_4_Mixin",
     "world.level.entity.EntityAccessMixin",
     "world.level.entity.PersistentEntitySectionManagerMixin",
+    "world.level.entity.PersistentEntitySectionManagerMixin_Chunk",
     "world.level.entity.npc.WanderingTraderSpawnerMixin",
     "world.level.gameevent.GameEventDispatcherMixin",
     "world.level.gameevent.vibrations.VibrationListenerMixin",
