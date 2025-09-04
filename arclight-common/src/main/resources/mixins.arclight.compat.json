@@ -7,6 +7,8 @@
   "plugin": "io.izzel.arclight.common.mod.ArclightMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "c2me.BlockableEventLoopMixin_C2ME",
+    "c2me.BusyRefCounterMixin",
     "c2me.ChunkHolderMixin_C2ME",
     "c2me.CraftChunkMixin_C2ME",
     "c2me.ItemHolderMixin",

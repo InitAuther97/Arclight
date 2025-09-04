@@ -1,9 +1,10 @@
 package io.izzel.arclight.common.bridge.compat.c2me;
 
 import io.reactivex.rxjava3.core.CompletableEmitter;
+import net.minecraft.util.thread.BlockableEventLoop;
 
-import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 public interface ItemHolderBridge {
-    void arclight$runBusyNow(CompletableEmitter emitter, BooleanSupplier condition, Runnable runnable);
+    void arclight$runBusyNow(BlockableEventLoop<?> blocker, CompletableEmitter emitter, Supplier<Throwable> condition, Runnable runnable);
 }
