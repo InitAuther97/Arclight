@@ -17,6 +17,11 @@
     "c2me.ServerAccessibleMixin",
     "c2me.ServerChunkCacheMixin_C2ME",
     "c2me.ServerLevelMixin_C2ME",
-    "c2me.StatusAdvancingSchedulerMixin"
+    "c2me.StatusAdvancingSchedulerMixin",
+    "c2me.debug.BusyRefCounterMixin_Debug",
+    "c2me.debug.ItemHolderMixin_Debug",
+    "c2me.debug.MinecraftServerMixin_C2ME_Debug",
+    "c2me.debug.NewChunkHolderVanillaInterfaceMixin_Debug",
+    "c2me.debug.StatusAdvancingSchedulerMixin_Debug"
   ]
 }

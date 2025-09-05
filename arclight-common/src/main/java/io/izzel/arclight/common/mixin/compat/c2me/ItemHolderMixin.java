@@ -23,6 +23,8 @@ public abstract class ItemHolderMixin implements ItemHolderBridge {
 
     @Shadow @Final private BusyRefCounter busyRefCounter;
 
+    @Shadow public abstract boolean isOpen();
+
     @Override
     public void arclight$runBusyNow(BlockableEventLoop<?> blocker, CompletableEmitter emitter, Supplier<Throwable> condition, Runnable runnable) {
         Assertions.assertTrue(blocker.isSameThread(), "BUG: trying to managedBlock off the running thread of the BlockableEventLoop");
@@ -46,12 +48,10 @@ public abstract class ItemHolderMixin implements ItemHolderBridge {
                 });
             }
             // Do not just wait, do some tasks!
-            // Chunk event mailbox won't be reentrant polled because no task will be polled when it's running.
-            // So it's safe (need extra care still) to poll the whole server for tasks.
             blocker.managedBlock(() -> {
                 Throwable err = condition.get();
                 error.setValue(err);
-                // If err != null, busy ticking has tried to cancel us. Got to move on now.
+                // If err != null, something has tried to cancel us. Got to move on now.
                 return err != null || proceed.getAcquire();
             });
             // We have mutual exclusively locked the holder. Let's see what we should do.
@@ -60,13 +60,29 @@ public abstract class ItemHolderMixin implements ItemHolderBridge {
                 runnable.run();
                 emitter.onComplete();
             } else {
+                ((BusyRefCounterBridge) busyRefCounter).arclight$removeMutexListener();
                 emitter.onError(value);
             }
-        } catch (Throwable t) {
-            emitter.onError(t);
+        } catch (Exception e) {
+            ((BusyRefCounterBridge) busyRefCounter).arclight$removeMutexListener();
+            emitter.onError(e);
         } finally {
             // Don't leave busy ref counter on even if something bad happens.
             busyRefCounter.decrementRefCount();
+        }
+    }
+
+    @Override
+    public void arclight$runBusyNow(CompletableEmitter emitter, Runnable runnable) {
+        synchronized (this) {
+            Assertions.assertTrue(isOpen(), "BUG: holder is already unloaded before unload event is sent");
+            busyRefCounter.incrementRefCount();
+        }
+        try {
+            runnable.run();
+        } finally {
+            busyRefCounter.decrementRefCount();
+            emitter.onComplete();
         }
     }
 }

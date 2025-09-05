@@ -1,6 +1,7 @@
 package io.izzel.arclight.common.mod.util;
 
 import io.izzel.arclight.common.mod.ArclightConstants;
+import io.izzel.arclight.common.mod.server.ArclightServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.WorldLoader;
@@ -10,6 +11,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.bukkit.TreeType;
 import org.bukkit.block.BlockState;
@@ -17,10 +19,8 @@ import org.bukkit.craftbukkit.v.event.CraftPortalEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Stack;
+import java.util.*;
+import java.util.function.Function;
 
 public class ArclightCaptures {
 
@@ -385,6 +385,36 @@ public class ArclightCaptures {
             return playerInteractCancelled;
         } finally {
             playerInteractCancelled = false;
+        }
+    }
+
+    private static ChunkPos waitingForChunk;
+    private static Exception waitingForChunkInitiatorStackTrace;
+
+    public static void captureWaitingForChunk(ChunkPos pos, Function<String, Exception> stacktrace) {
+        waitingForChunk = pos;
+        waitingForChunkInitiatorStackTrace = stacktrace != null ? stacktrace.apply("Chunk load initiator stack trace") : null;
+    }
+
+    public static ChunkPos logChunkWaitTimeout() {
+        ArclightServer.LOGGER.warn("Waiting for chunk {} for more than 1s, resetting timer;", waitingForChunk, waitingForChunkInitiatorStackTrace);
+        return waitingForChunk;
+    }
+
+    private static Map<ChunkPos, Exception> externallySaveDependencyStackTraces = new HashMap<>();
+
+    public static void externallySaveDependencyStackTrace(ChunkPos pos, Function<String, Exception> stacktrace) {
+        if (stacktrace == null) {
+            externallySaveDependencyStackTraces.remove(pos);
+        } else {
+            externallySaveDependencyStackTraces.put(pos, stacktrace.apply("Save dependency stack trace"));
+        }
+    }
+
+    public static void logExternallySaveDependency(ChunkPos pos) {
+        Exception ex = externallySaveDependencyStackTraces.get(pos);
+        if (ex != null) {
+            ArclightServer.LOGGER.warn("Holder {} is externally busy", pos, ex);
         }
     }
 

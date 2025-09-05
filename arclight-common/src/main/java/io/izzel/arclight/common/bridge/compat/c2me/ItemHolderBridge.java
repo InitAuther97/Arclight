@@ -7,4 +7,6 @@ import java.util.function.Supplier;
 
 public interface ItemHolderBridge {
     void arclight$runBusyNow(BlockableEventLoop<?> blocker, CompletableEmitter emitter, Supplier<Throwable> condition, Runnable runnable);
+    void arclight$runBusyNow(CompletableEmitter emitter, Runnable runnable);
+    void arclight$debug$pushNextBusyReason(String reason);
 }

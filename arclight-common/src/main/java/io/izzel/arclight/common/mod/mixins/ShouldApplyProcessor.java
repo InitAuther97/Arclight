@@ -10,8 +10,9 @@ import java.util.function.Predicate;
 public class ShouldApplyProcessor {
 
     private static final List<Predicate<ClassNode>> PREDICATES = List.of(
-        PlatformMixinProcessor::shouldApply,
-        LoadIfModProcessor::shouldApply
+            PlatformMixinProcessor::shouldApply,
+            LoadIfModProcessor::shouldApply,
+            LoadIfPropertyProcessor::shouldApply
     );
 
     public static boolean shouldApply(String mixinClass) {

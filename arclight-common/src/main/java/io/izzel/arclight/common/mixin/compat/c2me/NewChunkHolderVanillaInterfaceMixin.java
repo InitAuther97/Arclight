@@ -9,10 +9,12 @@ import com.ishland.flowsched.scheduler.ItemHolder;
 import com.ishland.flowsched.util.Assertions;
 import io.izzel.arclight.common.bridge.compat.c2me.ItemHolderBridge;
 import io.izzel.arclight.common.bridge.compat.c2me.NewChunkHolderVanillaInterfaceBridge;
+import io.izzel.arclight.common.bridge.core.server.MinecraftServerBridge;
 import io.izzel.arclight.common.bridge.core.world.chunk.ChunkBridge;
 import io.izzel.arclight.common.mod.compat.c2me.C2MEScope;
 import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.disposables.Disposable;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -30,19 +32,21 @@ public abstract class NewChunkHolderVanillaInterfaceMixin extends ChunkHolderMix
 
     @Shadow @Final private ItemHolder<ChunkPos, ChunkState, ChunkLoadingContext, NewChunkHolderVanillaInterface> newHolder;
 
+    @Shadow public abstract ChunkPos getPos();
+
     protected NewChunkHolderVanillaInterfaceMixin(ChunkPos chunkPos) {
         super(chunkPos);
     }
 
     private final AtomicReference<BooleanSupplier> canceller = new AtomicReference<>();
     private Completable loadFuture;
+    private Disposable loadAction;
     private CompletableFuture<Void> unloadFuture;
 
     @Override
     public CompletableFuture<Void> arclight$scheduleUnload(ChunkLoadingContext ctx, Cancellable cancellable) {
         // A cancellation is already sent by setStatus which cancels the future for ACCESSIBLE
         LevelChunk chunk = (LevelChunk) newHolder.getItem().get().chunk();
-        MinecraftServer server = ctx.tacs().level.getServer();
         canceller.setRelease(null);
         if (loadFuture != null) {
             return unloadFuture = (CompletableFuture<Void>) loadFuture.andThen( // need to wait until load event is sent; completed on main thread or cancelled on scheduler
@@ -55,11 +59,11 @@ public abstract class NewChunkHolderVanillaInterfaceMixin extends ChunkHolderMix
                                 // perform unload event when server is ready, this is reentrant which will not enter during another chunk event
                                 C2MEScope.SCHEDULER_BACKED_BY_SERVER_REENTRANT.scheduleDirect(emitter::onComplete);
                             }).andThen(Completable.create(emitter -> {
-                                // We're mutually busy and only busy ticking will occur now, perform unload event
-                                ((ItemHolderBridge) newHolder).arclight$runBusyNow(server, emitter, () -> null, ((ChunkBridge) chunk)::bridge$unloadCallback);
+                                // We're mutual exclusively busy naturally because unload won't proceed. Only busy ticking will occur now, perform unload event
+                                ((ItemHolderBridge) newHolder).arclight$runBusyNow(emitter, ((ChunkBridge) chunk)::bridge$unloadCallback);
                             }).subscribeOn(C2MEScope.SCHEDULER_BACKED_BY_SERVER)) // ensure it's running on server, this is not reentrant which may fall through if already on server
                     )
-                    .onErrorComplete(it -> it == C2MEScope.LOAD_EVENT_CANCELLED) // if it's failed then no need to unload; if load event failed then proceed to unload.
+                    .onErrorComplete(it -> it == C2MEScope.LOAD_EVENT_CANCELLED) // if load event failed then proceed to unload.
                     .doOnError(th -> cancellable.cancel()) // don't forget to cancel downgrading if it's failed
                     .<Void>toCompletionStage(null); // do unload after unload event
         }
@@ -69,36 +73,55 @@ public abstract class NewChunkHolderVanillaInterfaceMixin extends ChunkHolderMix
     @Override
     public void arclight$scheduleLoad(ChunkLoadingContext ctx) {
         Assertions.assertTrue(
-                (unloadFuture == null || unloadFuture.isDone()) && (loadFuture == null || loadFuture.onErrorComplete().subscribe().isDisposed()),
+                (unloadFuture == null || unloadFuture.isDone()) && (loadFuture == null || loadAction.isDisposed()),
                 "BUG: Scheduling load before event future is done"
         );
         MinecraftServer server = ctx.tacs().level.getServer();
+        MinecraftServerBridge bridge = (MinecraftServerBridge) server;
         canceller.setRelease(null);
-        loadFuture = Completable.fromCompletionStage(newHolder.getFutureForStatus(NewChunkStatus.SERVER_ACCESSIBLE)) // completed when doOnEvent setStatus on main thread, still busy
+        loadFuture = Completable.fromCompletionStage(newHolder.getFutureForStatus(NewChunkStatus.SERVER_ACCESSIBLE)) // completed when doOnEvent setStatus on main thread (possibly), still busy
                 .andThen(Completable.create(emitter -> {
+                            // Fast check in advance for retry: if it's already cancelled then we fail immediately
+                            final var future0 = newHolder.getFutureForStatus(NewChunkStatus.SERVER_ACCESSIBLE);
+                            if (!future0.isDone() || future0.isCompletedExceptionally()) {
+                                emitter.onError(C2MEScope.LOAD_EVENT_CANCELLED);
+                            }
+                            // Chunk event mailbox won't be reentrant polled because no task will be polled when it's running.
+                            // So it's safe (need extra care still) to poll the whole server for tasks.
                             ((ItemHolderBridge) newHolder).arclight$runBusyNow(server, emitter, () -> { // on main thread, after indefinite time
-                                // if (!newHolder.isOpen()) return C2MEScope.LOAD_EVENT_CANCELLED; // No need for now since unload will not proceed before load event is completed
+                                // if (!newHolder.isOpen()) return C2MEScope.LOAD_EVENT_CANCELLED; // No need for now since unload will not proceed before load event is completed.
+                                if (!bridge.arclight$haveTime()) {
+                                    // We may run out of tick time before we can proceed. In that case no task can be polled and there will be deadlock. So if tick time runs out fail immediately.
+                                    return C2MEScope.MUTEX_TIMEOUT;
+                                }
                                 // check for ongoing downgrade from FULL; if any stop immediately
                                 final var future = newHolder.getFutureForStatus(NewChunkStatus.SERVER_ACCESSIBLE);
-                                return future.isDone() && !future.isCompletedExceptionally() ? null : C2MEScope.LOAD_EVENT_CANCELLED;
+                                if (future.isDone() && !future.isCompletedExceptionally()) {
+                                    return null;
+                                }
+                                // ArclightCaptures.captureWaitingForChunk(null, null);
+                                return C2MEScope.LOAD_EVENT_CANCELLED;
                             }, () -> {
-                                // We're mutually busy and only busy ticking will occur now, perform load
+                                // We're mutual exclusively busy and only busy ticking will occur now, perform load
                                 ChunkState state = newHolder.getItem().get();
                                 Assertions.assertTrue(newHolder.isOpen() && state.chunk() instanceof LevelChunk, "BUG: Chunk load event is not cancelled before chunk unloading");
                                 ((ChunkBridge) state.chunk()).bridge$loadCallback();
                             });
-                        }).subscribeOn(C2MEScope.SCHEDULER_BACKED_BY_SERVER_REENTRANT) // subscribe on main thread, can fall through on depth 0
-                ).cache();
-        loadFuture.onErrorComplete().subscribe();
+                        }).subscribeOn(C2MEScope.SCHEDULER_BACKED_BY_SERVER_TELL)
+                        // impossible to short circuit because we need to release advanceStatus op but there's a chance setStatus won't run on main thread.
+                        // so it's unsure whether the ref count should be 1 or 2 if we fall through.
+                        .retry(it -> it == C2MEScope.MUTEX_TIMEOUT)) // If failed to proceed due to timeout, retry
+                .cache();
+        loadAction = loadFuture.onErrorComplete().subscribe();
     }
 
     @Override
     public void arclight$cancelIfNecessary(boolean isUpgrade) {
         if (isUpgrade) {
-            loadFuture.doOnComplete(() -> {
+            loadFuture.subscribe(() -> {
                 BooleanSupplier canceller = this.canceller.compareAndExchange(null, C2MEScope.TRUE);
                 if (canceller != null) canceller.getAsBoolean();
-            }).subscribe();
+            }, unused -> {});
         }
     }
 }

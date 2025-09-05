@@ -3,10 +3,12 @@ package io.izzel.arclight.common.mixin.compat.c2me;
 import com.ishland.flowsched.scheduler.BusyRefCounter;
 import com.ishland.flowsched.util.Assertions;
 import io.izzel.arclight.common.bridge.compat.c2me.BusyRefCounterBridge;
+import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import io.izzel.arclight.common.mod.server.ArclightServer;
 import it.unimi.dsi.fastutil.objects.ReferenceList;
 import org.spongepowered.asm.mixin.*;
 
+@LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
 @Mixin(value = BusyRefCounter.class, remap = false)
 public abstract class BusyRefCounterMixin implements BusyRefCounterBridge {
 
@@ -27,6 +29,11 @@ public abstract class BusyRefCounterMixin implements BusyRefCounterBridge {
         } else {
             arclight$mutexListener = runnable;
         }
+    }
+
+    @Override
+    public synchronized void arclight$removeMutexListener() {
+        arclight$mutexListener = null;
     }
 
     /**
@@ -78,6 +85,5 @@ public abstract class BusyRefCounterMixin implements BusyRefCounterBridge {
                 t.printStackTrace();
             }
         }
-
     }
 }

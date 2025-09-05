@@ -13,23 +13,14 @@ import java.util.function.BooleanSupplier;
 
 public class C2MEScope {
 
-    public static final CancellationException LOAD_EVENT_CANCELLED = new CancellationException("Load event cancelled") {
-        @Override
-        public synchronized Throwable fillInStackTrace() {
-            return this;
-        }
-    };
-
-    public static final CancellationException UNLOAD_CANCELLED = new CancellationException("Unload cancelled") {
-        @Override
-        public synchronized Throwable fillInStackTrace() {
-            return this;
-        }
-    };
+    public static final CancellationException LOAD_EVENT_CANCELLED = new CompletableControlException("Load event cancelled");
+    public static final CancellationException UNLOAD_CANCELLED = new CompletableControlException("Unload cancelled");
+    public static final CancellationException MUTEX_TIMEOUT = new CompletableControlException("Main thread mutex timeout");
 
     public static final BooleanSupplier TRUE = () -> true;
 
     // Should not be used to schedule periodic tasks!
+    public static final Scheduler SCHEDULER_BACKED_BY_SERVER_TELL;
     public static final Scheduler SCHEDULER_BACKED_BY_SERVER;
     public static final Scheduler SCHEDULER_BACKED_BY_SERVER_REENTRANT;
 
@@ -67,7 +58,7 @@ public class C2MEScope {
 
             @Override
             public void executeIfPossible(Runnable runnable) {
-                if (this.scheduleExecutables()) {
+                if (!isSameThread()) { // Skip reentrant check
                     this.tell(runnable);
                 } else {
                     doRunTask(runnable);
@@ -76,7 +67,7 @@ public class C2MEScope {
 
             @Override
             public void execute(Runnable runnable) {
-                if (!isSameThread()) { // Skip reentrant check
+                if (this.scheduleExecutables()) {
                     this.tell(runnable);
                 } else {
                     doRunTask(runnable);
@@ -101,6 +92,7 @@ public class C2MEScope {
             @Override
             public void managedBlock(BooleanSupplier booleanSupplier) {
                 Assertions.assertTrue(!runningTask(), "BUG: reentrant managedBlock on chunk event mailbox");
+                Assertions.assertTrue(isSameThread(), "BUG: managedBlock on chunk event mailbox off thread");
                 super.managedBlock(booleanSupplier);
             }
 
@@ -119,7 +111,8 @@ public class C2MEScope {
                 return server.getRunningThread();
             }
         };
-        SCHEDULER_BACKED_BY_SERVER = Schedulers.from(MAIN_THREAD_MAILBOX);
-        SCHEDULER_BACKED_BY_SERVER_REENTRANT = Schedulers.from(MAIN_THREAD_MAILBOX::executeIfPossible);
+        SCHEDULER_BACKED_BY_SERVER_TELL = Schedulers.from(MAIN_THREAD_MAILBOX::tell);
+        SCHEDULER_BACKED_BY_SERVER = Schedulers.from(MAIN_THREAD_MAILBOX::executeIfPossible);
+        SCHEDULER_BACKED_BY_SERVER_REENTRANT = Schedulers.from(MAIN_THREAD_MAILBOX);
     }
 }

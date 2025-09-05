@@ -3,6 +3,7 @@ package io.izzel.arclight.common.bridge.compat.c2me;
 import io.reactivex.rxjava3.core.CompletableEmitter;
 import net.minecraft.util.thread.BlockableEventLoop;
 
+import java.util.Map;
 import java.util.function.Supplier;
 
 public interface BusyRefCounterBridge {
@@ -13,4 +14,12 @@ public interface BusyRefCounterBridge {
      * @param runnable called when mutual exclusively busy
      */
     void arclight$addMutexListener(Runnable runnable);
+
+    void arclight$removeMutexListener();
+
+    void arclight$debug$pushBusyReason(String reason);
+
+    void arclight$debug$popBusyReason(String reason);
+
+    Map<String, Exception> arclight$debug$allBusyReason();
 }

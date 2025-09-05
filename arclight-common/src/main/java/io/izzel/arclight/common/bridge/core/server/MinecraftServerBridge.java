@@ -49,4 +49,6 @@ public interface MinecraftServerBridge {
     default void bridge$forge$lockRegistries() {}
 
     default void bridge$forge$unlockRegistries() {}
+
+    boolean arclight$haveTime();
 }

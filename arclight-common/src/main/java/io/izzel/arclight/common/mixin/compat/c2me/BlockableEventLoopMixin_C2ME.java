@@ -1,12 +1,14 @@
 package io.izzel.arclight.common.mixin.compat.c2me;
 
 import io.izzel.arclight.common.bridge.compat.c2me.BlockableEventLoopBridge_C2ME;
+import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import net.minecraft.util.thread.BlockableEventLoop;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 
 import java.util.concurrent.locks.LockSupport;
 
+@LoadIfMod(modid = "c2me", condition = LoadIfMod.ModCondition.PRESENT)
 @Mixin(BlockableEventLoop.class)
 public abstract class BlockableEventLoopMixin_C2ME implements BlockableEventLoopBridge_C2ME {
 

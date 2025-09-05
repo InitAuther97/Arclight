@@ -81,7 +81,6 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
@@ -191,6 +190,11 @@ public abstract class MinecraftServerMixin extends ReentrantBlockableEventLoop<T
     @Override
     public boolean bridge$hasStopped() {
         return this.hasStopped();
+    }
+
+    @Override
+    public boolean arclight$haveTime() {
+        return haveTime() || tickRateManager.isSprinting();
     }
 
     @Inject(method = "<init>", at = @At("RETURN"))
