@@ -6,6 +6,8 @@ import net.neoforged.neoforge.common.NeoForge;
 public abstract class ArclightEventDispatcherRegistry {
 
     public static void registerAllEventDispatchers() {
+        NeoForge.EVENT_BUS.register(new LifecycleEventHandler());
+        NeoForge.EVENT_BUS.register(new PermissionEventHandler());
         NeoForge.EVENT_BUS.register(new BlockBreakEventDispatcher());
         NeoForge.EVENT_BUS.register(new BlockPlaceEventDispatcher());
         NeoForge.EVENT_BUS.register(new EntityEventDispatcher());

@@ -1,9 +1,11 @@
 package io.izzel.arclight.neoforge.mod.permission;
 
 import io.izzel.arclight.common.bridge.core.entity.player.ServerPlayerEntityBridge;
+import io.izzel.arclight.common.mod.server.permission.ArclightPermissibleBase;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.permission.handler.IPermissionHandler;
+import net.neoforged.neoforge.server.permission.handler.IPermissionHandlerFactory;
 import net.neoforged.neoforge.server.permission.nodes.PermissionDynamicContext;
 import net.neoforged.neoforge.server.permission.nodes.PermissionNode;
 import net.neoforged.neoforge.server.permission.nodes.PermissionTypes;
@@ -15,16 +17,24 @@ import java.util.UUID;
 
 public final class ArclightPermissionHandler implements IPermissionHandler {
 
+    public static final ResourceLocation IDENTIFIER = ResourceLocation.fromNamespaceAndPath("arclight", "permission");
+    public static ResourceLocation fallback;
+
+    public static IPermissionHandlerFactory factory(IPermissionHandlerFactory delegate) {
+        return nodes -> new ArclightPermissionHandler(delegate.create(nodes));
+    }
+
     private final IPermissionHandler delegate;
 
     public ArclightPermissionHandler(IPermissionHandler delegate) {
-        Objects.requireNonNull(delegate, "permission handler");
+        Objects.requireNonNull(delegate, "permission handler delegate");
         this.delegate = delegate;
+        fallback = delegate.getIdentifier();
     }
 
     @Override
     public ResourceLocation getIdentifier() {
-        return ResourceLocation.parse("arclight:permission");
+        return IDENTIFIER;
     }
 
     @Override
@@ -35,8 +45,10 @@ public final class ArclightPermissionHandler implements IPermissionHandler {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getPermission(ServerPlayer player, PermissionNode<T> node, PermissionDynamicContext<?>... context) {
-        if (node.getType() == PermissionTypes.BOOLEAN) {
-            return (T) (Object) ((ServerPlayerEntityBridge) player).bridge$getBukkitEntity().hasPermission(node.getNodeName());
+        final var bukkit = ((ServerPlayerEntityBridge) player).bridge$getBukkitEntity();
+        final var perm = node.getNodeName();
+        if (node.getType() == PermissionTypes.BOOLEAN && ArclightPermissibleBase.isKnownPermission(bukkit, perm)) {
+            return (T) Boolean.valueOf(bukkit.hasPermission(perm));
         } else {
             return delegate.getPermission(player, node, context);
         }
@@ -44,9 +56,10 @@ public final class ArclightPermissionHandler implements IPermissionHandler {
 
     @Override
     public <T> T getOfflinePermission(UUID uuid, PermissionNode<T> node, PermissionDynamicContext<?>... context) {
-        var player = Bukkit.getPlayer(uuid);
-        if (player != null && node.getType() == PermissionTypes.BOOLEAN) {
-            return (T) (Object) player.hasPermission(node.getNodeName());
+        final var player = Bukkit.getPlayer(uuid);
+        final var perm = node.getNodeName();
+        if (player != null && node.getType() == PermissionTypes.BOOLEAN && ArclightPermissibleBase.isKnownPermission(player, perm)) {
+            return (T) Boolean.valueOf(player.hasPermission(perm));
         } else {
             return delegate.getOfflinePermission(uuid, node, context);
         }

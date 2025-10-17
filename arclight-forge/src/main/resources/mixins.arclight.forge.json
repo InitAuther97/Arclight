@@ -75,7 +75,6 @@
     "forge.IForgeServerPlayerMixin",
     "forge.NetworkRegistryAccessor",
     "forge.PacketDistributorMixin",
-    "forge.PermissionAPIMixin",
     "forge.items.CombinedInvWrapperAccessor",
     "forge.items.RangedWrapperAccessor",
     "forge.items.SidedInvWrapperAccessor",

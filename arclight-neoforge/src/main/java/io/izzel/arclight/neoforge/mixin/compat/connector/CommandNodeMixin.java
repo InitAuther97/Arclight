@@ -3,6 +3,7 @@ package io.izzel.arclight.neoforge.mixin.compat.connector;
 import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import io.izzel.arclight.common.bridge.core.command.CommandSourceStackBridge;
 import io.izzel.arclight.common.mod.mixins.annotation.LoadIfMod;
 import io.izzel.arclight.common.mod.mixins.annotation.TransformAccess;
 import org.objectweb.asm.Opcodes;
@@ -46,7 +47,7 @@ public class CommandNodeMixin<S> {
      */
     @Overwrite
     public boolean canUse(final S source) {
-        if (source instanceof final io.izzel.arclight.common.bridge.core.command.CommandSourceStackBridge bridge) {
+        if (source instanceof final CommandSourceStackBridge bridge) {
             try {
                 bridge.bridge$setCurrentCommand((CommandNode<?>) (Object) this);
                 return requirement.test(source);

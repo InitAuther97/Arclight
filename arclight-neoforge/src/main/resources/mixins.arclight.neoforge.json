@@ -78,7 +78,6 @@
     "neoforge.NetworkRegistryAccessor",
     "neoforge.NetworkRegistryMixin",
     "neoforge.PacketDistributorMixin",
-    "neoforge.PermissionAPIMixin",
     "neoforge.items.CombinedInvWrapperAccessor",
     "neoforge.items.RangedWrapperAccessor",
     "neoforge.items.SidedInvWrapperAccessor",

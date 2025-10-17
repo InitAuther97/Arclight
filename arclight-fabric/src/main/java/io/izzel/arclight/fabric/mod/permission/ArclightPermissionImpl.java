@@ -1,6 +1,7 @@
 package io.izzel.arclight.fabric.mod.permission;
 
 import io.izzel.arclight.common.bridge.core.command.CommandSourceStackBridge;
+import io.izzel.arclight.common.mod.server.permission.ArclightPermissibleBase;
 import io.izzel.arclight.i18n.ArclightConfig;
 import me.lucko.fabric.api.permissions.v0.PermissionCheckEvent;
 import net.fabricmc.fabric.api.util.TriState;
@@ -14,7 +15,7 @@ public class ArclightPermissionImpl {
         PermissionCheckEvent.EVENT.register((provider, permission) -> {
             if (provider instanceof CommandSourceStackBridge stack) {
                 var sender = stack.bridge$getBukkitSender();
-                if (sender != null) {
+                if (sender != null && ArclightPermissibleBase.isKnownPermission(sender, permission)) {
                     return TriState.of(sender.hasPermission(permission));
                 }
             }
