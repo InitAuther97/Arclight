@@ -6,6 +6,7 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import io.izzel.arclight.api.Unsafe;
+import io.izzel.arclight.common.mod.ArclightCommon;
 import io.izzel.arclight.common.mod.server.ArclightServer;
 import io.izzel.arclight.common.mod.util.remapper.generated.ArclightReflectionHandler;
 import io.izzel.arclight.i18n.ArclightConfig;
@@ -169,17 +170,25 @@ public class ClassLoaderRemapper extends LenientJarRemapper {
     }
 
     private void checkFieldTypes(Field field) throws TypeNotPresentException {
-        field.getGenericType();
+        try {
+            field.getGenericType();
+        } catch (RuntimeException e) {
+            ArclightCommon.api().rethrowIfNotPresent(e);
+        }
     }
 
     private void checkMethodTypes(Method method) throws TypeNotPresentException {
-        method.getGenericReturnType();
-        method.getGenericParameterTypes();
+        try {
+            method.getGenericReturnType();
+            method.getGenericParameterTypes();
+        } catch (RuntimeException e) {
+            ArclightCommon.api().rethrowIfNotPresent(e);
+        }
     }
 
     public void tryDefineClass(String internalName) {
         if (!internalName.startsWith(PREFIX)) {
-            throw new NoClassDefFoundError(internalName);
+            ArclightServer.LOGGER.error("Defining {} which is not a Minecraft class. This could be a mod to blame.", internalName);
         }
         LOGGER.warn("Loading CLIENT side class: {}", internalName);
         ClassWriter writer = new ClassWriter(0);

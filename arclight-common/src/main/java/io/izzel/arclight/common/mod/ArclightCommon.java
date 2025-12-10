@@ -19,6 +19,15 @@ public class ArclightCommon {
          * it if necessary when upgrading.
          */
         <T> Set<T> guavaReachableNodes(Graph<T> graph, T node);
+
+        /**
+         * This is here because we need to check for incomplete dist marker usages.
+         * When plugin reflection tries to load these methods a RuntimeException may
+         * be thrown for loading in an invalid environment.
+         * We need to effectively check these problems and avoid crashing the server
+         * as best as we can.
+         */
+        void rethrowIfNotPresent(RuntimeException e) throws TypeNotPresentException;
     }
 
     private static Api instance;

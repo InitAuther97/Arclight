@@ -51,4 +51,9 @@ public class ForgeCommonImpl implements ArclightCommon.Api {
     public <T> Set<T> guavaReachableNodes(Graph<T> graph, T node) {
         return Graphs.reachableNodes(graph, node);
     }
+
+    @Override
+    public void rethrowIfNotPresent(RuntimeException e) throws TypeNotPresentException {
+        throw e;
+    }
 }
